@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Vendor Workflow Enhancer",
+  "version": "1.0.0",
+  "description": "Enhances vendor workflow table with DONE BY column, filtering, data copying, and row highlighting",
+  "permissions": [
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://powertrack3.aptaracorp.com/*",
+    "https://powertrack4.aptaracorp.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://powertrack3.aptaracorp.com/AptaraVendorAPI/vendorWorkflow.html",
+        "https://powertrack4.aptaracorp.com/AptaraVendorAPI/vendorWorkflow.html"
+      ],
+      "js": [
+        "utils.js",
+        "apiService.js",
+        "tableManager.js",
+        "filterManager.js",
+        "copyManager.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
+
