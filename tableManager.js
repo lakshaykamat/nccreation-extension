@@ -73,12 +73,64 @@ window.TableExtensionTable = (function() {
     const table = Utils.getTable();
     if (!table) return;
     
+    // Get fresh column indices each time (important after pagination)
     const headers = Utils.getHeaders(table);
-    const doneByHeaderIndex = Utils.findColumnIndex(table, DONE_BY_COLUMN);
-    const articleIdIndex = Utils.findColumnIndex(table, ARTICLE_ID_COLUMN);
+    
+    // Find columns with strict validation
+    let doneByHeaderIndex = -1;
+    let articleIdIndex = -1;
+    
+    headers.forEach((th, index) => {
+      const headerText = th.textContent.trim();
+      const headerLower = headerText.toLowerCase();
+      
+      // Exact match for DONE BY
+      if (headerLower === 'done by' || headerText === 'DONE BY') {
+        doneByHeaderIndex = index;
+      }
+      
+      // Exact match for Article ID (case-insensitive)
+      if (headerLower === 'article id' || headerText === 'Article ID') {
+        articleIdIndex = index;
+      }
+    });
+    
+    // If exact match failed, try the findColumnIndex method
+    if (doneByHeaderIndex === -1) {
+      doneByHeaderIndex = Utils.findColumnIndex(table, DONE_BY_COLUMN);
+    }
+    if (articleIdIndex === -1) {
+      articleIdIndex = Utils.findColumnIndex(table, ARTICLE_ID_COLUMN);
+    }
     
     if (doneByHeaderIndex === -1 || articleIdIndex === -1) {
-      console.log('Required columns not found');
+      console.log('Required columns not found', { 
+        doneByHeaderIndex, 
+        articleIdIndex,
+        availableHeaders: headers.map((h, i) => `${i}: "${h.textContent.trim()}"`).join(', ')
+      });
+      return;
+    }
+    
+    // Verify column indices are valid
+    if (doneByHeaderIndex >= headers.length || articleIdIndex >= headers.length) {
+      console.log('Column indices out of range', { doneByHeaderIndex, articleIdIndex, headerCount: headers.length });
+      return;
+    }
+    
+    // Final verification - ensure headers match what we expect
+    const foundDoneByHeader = headers[doneByHeaderIndex]?.textContent.trim() || '';
+    const foundArticleIdHeader = headers[articleIdIndex]?.textContent.trim() || '';
+    if (!foundDoneByHeader.toLowerCase().includes('done by') || 
+        !foundArticleIdHeader.toLowerCase().includes('article id')) {
+      console.log('Column header mismatch - aborting to prevent data corruption', { 
+        expectedDoneBy: DONE_BY_COLUMN, 
+        foundDoneBy: foundDoneByHeader,
+        foundDoneByIndex: doneByHeaderIndex,
+        expectedArticleId: ARTICLE_ID_COLUMN,
+        foundArticleId: foundArticleIdHeader,
+        foundArticleIdIndex: articleIdIndex
+      });
       return;
     }
     
@@ -86,28 +138,50 @@ window.TableExtensionTable = (function() {
     const articleMap = API.getArticleMap();
     let populatedCount = 0;
     
+    // Verify header count matches expected column structure
+    const expectedMinColumns = Math.max(articleIdIndex, doneByHeaderIndex) + 1;
+    if (headers.length < expectedMinColumns) {
+      console.log('Header count mismatch', { headers: headers.length, expected: expectedMinColumns });
+      return;
+    }
+    
     rows.forEach((row) => {
       const cells = Array.from(row.querySelectorAll('td'));
       
-      if (cells.length > articleIdIndex) {
-        const articleId = Utils.getCellValue(row, articleIdIndex);
-        
-        // Get or create DONE BY cell
-        if (cells.length > doneByHeaderIndex) {
-          const doneByCell = cells[doneByHeaderIndex];
-          const doneBy = articleMap.get(articleId) || '-';
-          doneByCell.textContent = doneBy;
-          populatedCount++;
-        } else if (cells.length > articleIdIndex) {
-          // Cell doesn't exist, need to add it
-          const articleIdCell = cells[articleIdIndex];
-          const newCell = document.createElement('td');
-          newCell.align = 'center';
-          newCell.className = ' ';
-          newCell.textContent = articleMap.get(articleId) || '-';
-          articleIdCell.insertAdjacentElement('afterend', newCell);
-          populatedCount++;
-        }
+      // Ensure we have enough cells to match headers
+      if (cells.length < headers.length) {
+        return; // Skip rows that don't match header structure
+      }
+      
+      // Double-check we're reading from the correct Article ID column
+      const articleId = cells[articleIdIndex]?.textContent.trim() || '';
+      if (!articleId) {
+        return; // Skip rows without article ID
+      }
+      
+      // Verify the cell we're reading from looks like an Article ID (contains alphanumeric pattern)
+      // This is a safety check to ensure we're not reading from the wrong column
+      if (!/^[A-Z0-9]+/.test(articleId)) {
+        console.log('Suspicious Article ID value, skipping row', { articleId, columnIndex: articleIdIndex });
+        return;
+      }
+      
+      // Get or create DONE BY cell - verify we're writing to the correct column
+      if (cells.length > doneByHeaderIndex) {
+        const doneByCell = cells[doneByHeaderIndex];
+        // Verify this cell is in the DONE BY column by checking its position matches header
+        const doneBy = articleMap.get(articleId) || '-';
+        doneByCell.textContent = doneBy;
+        populatedCount++;
+      } else {
+        // Cell doesn't exist, need to add it after Article ID
+        const articleIdCell = cells[articleIdIndex];
+        const newCell = document.createElement('td');
+        newCell.align = 'center';
+        newCell.className = ' ';
+        newCell.textContent = articleMap.get(articleId) || '-';
+        articleIdCell.insertAdjacentElement('afterend', newCell);
+        populatedCount++;
       }
     });
     
@@ -138,34 +212,6 @@ window.TableExtensionTable = (function() {
     }, 100);
   }
 
-  /**
-   * Inject CSS for highlighting if not already present
-   */
-  function injectHighlightCSS() {
-    if (document.getElementById('table-highlight-style')) {
-      return; // Already injected
-    }
-
-    // Generate CSS for all highlight rules
-    let cssRules = '';
-    Object.keys(HIGHLIGHT_RULES).forEach((name, index) => {
-      const color = HIGHLIGHT_RULES[name];
-      const className = `highlight-row-${index}`;
-      cssRules += `
-        #article_data tbody tr.${className} {
-          background-color: ${color} !important;
-        }
-        #article_data tbody tr.${className} td {
-          background-color: transparent !important;
-        }
-      `;
-    });
-
-    const style = document.createElement('style');
-    style.id = 'table-highlight-style';
-    style.textContent = cssRules;
-    document.head.appendChild(style);
-  }
 
   /**
    * Highlight rows where Done by matches the highlight name
@@ -178,7 +224,6 @@ window.TableExtensionTable = (function() {
     }
 
     // Inject CSS first
-    injectHighlightCSS();
 
     const doneByIndex = Utils.findColumnIndex(table, DONE_BY_COLUMN);
     if (doneByIndex === -1) {
@@ -257,13 +302,31 @@ window.TableExtensionTable = (function() {
       return;
     }
 
-    // Find Article ID column header
-    const articleIdHeader = headers.find(
-      th => th.textContent.trim().includes(ARTICLE_ID_COLUMN)
+    // Find Article ID column header with strict matching
+    let articleIdHeader = headers.find(
+      th => {
+        const text = th.textContent.trim();
+        return text.toLowerCase() === 'article id' || text === 'Article ID';
+      }
     );
     
+    // Fallback to includes if exact match fails
     if (!articleIdHeader) {
-      console.log('Article ID column not found');
+      articleIdHeader = headers.find(
+        th => th.textContent.trim().toLowerCase().includes('article id')
+      );
+    }
+    
+    if (!articleIdHeader) {
+      console.log('Article ID column not found. Available headers:', 
+        headers.map((h, i) => `${i}: "${h.textContent.trim()}"`).join(', '));
+      return;
+    }
+    
+    // Verify we found the correct column
+    const articleIdHeaderText = articleIdHeader.textContent.trim();
+    if (!articleIdHeaderText.toLowerCase().includes('article id')) {
+      console.log('Found column does not match Article ID:', articleIdHeaderText);
       return;
     }
 
@@ -297,18 +360,27 @@ window.TableExtensionTable = (function() {
     const rows = Utils.getTableRows(table);
     const articleMap = API.getArticleMap();
     
+    // Find Article ID column index (should be the one we just found)
+    const articleIdIndex = Utils.findColumnIndex(table, ARTICLE_ID_COLUMN);
+    if (articleIdIndex === -1) {
+      console.log('Article ID column not found when adding cells');
+      return;
+    }
+    
     rows.forEach((row) => {
       const cells = Array.from(row.querySelectorAll('td'));
-      if (cells.length > 2) {
-        const articleIdCell = cells[2];
+      if (cells.length > articleIdIndex) {
+        const articleIdCell = cells[articleIdIndex];
         const articleId = articleIdCell.textContent.trim();
-        const doneBy = articleMap.get(articleId) || '-';
-        
-        const newCell = document.createElement('td');
-        newCell.align = 'center';
-        newCell.className = ' ';
-        newCell.textContent = doneBy;
-        articleIdCell.insertAdjacentElement('afterend', newCell);
+        if (articleId) {
+          const doneBy = articleMap.get(articleId) || '-';
+          
+          const newCell = document.createElement('td');
+          newCell.align = 'center';
+          newCell.className = ' ';
+          newCell.textContent = doneBy;
+          articleIdCell.insertAdjacentElement('afterend', newCell);
+        }
       }
     });
 

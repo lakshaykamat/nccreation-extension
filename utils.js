@@ -38,9 +38,24 @@ window.TableExtensionUtils = (function() {
    */
   function findColumnIndex(table, headerText) {
     const headers = getHeaders(table);
-    return headers.findIndex(th => 
-      th.textContent.trim().includes(headerText)
+    const searchText = headerText.trim().toLowerCase();
+    // First try exact match (case-insensitive)
+    let index = headers.findIndex(th => 
+      th.textContent.trim().toLowerCase() === searchText
     );
+    // If no exact match, try contains match (but be more careful)
+    if (index === -1) {
+      index = headers.findIndex(th => {
+        const headerTextLower = th.textContent.trim().toLowerCase();
+        // Only match if the search text is a significant part of the header
+        // This prevents "SRC" from matching "MSP" or vice versa
+        return headerTextLower.includes(searchText) && 
+               (headerTextLower.length <= searchText.length + 2 || 
+                headerTextLower.startsWith(searchText) || 
+                headerTextLower.endsWith(searchText));
+      });
+    }
+    return index;
   }
 
   /**

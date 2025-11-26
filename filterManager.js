@@ -118,8 +118,8 @@ window.TableExtensionFilter = (function() {
     // Update DataTables if available
     updateDataTables();
     
-    // Update the info text
-    updateInfoText(visibleCount);
+    // Don't update info text - let DataTables manage pagination text naturally
+    // Filtering only hides/shows rows with CSS, pagination should show total count
   }
   
   /**
@@ -136,8 +136,10 @@ window.TableExtensionFilter = (function() {
         const dataTable = window.jQuery('#article_data').DataTable();
         if (dataTable) {
           const pageInfo = dataTable.page.info();
+          // pageInfo.end is exclusive, so use it directly for the end value
+          // pageInfo.start is 0-indexed, so add 1 for display
           const start = pageInfo.start + 1;
-          const end = Math.min(pageInfo.start + pageInfo.length, visibleCount);
+          const end = Math.min(pageInfo.end, visibleCount);
           
           if (visibleCount === 0) {
             infoDiv.textContent = 'Showing 0 to 0 of 0 entries';
@@ -168,14 +170,8 @@ window.TableExtensionFilter = (function() {
         const dataTable = window.jQuery('#article_data').DataTable();
         if (dataTable) {
           // Trigger redraw to update pagination info
+          // Don't update info text - let DataTables manage it naturally
           dataTable.draw(false); // false = don't reset paging
-          
-          // Update info text after draw completes
-          setTimeout(() => {
-            const rows = Utils.getTableRows(Utils.getTable());
-            const visibleCount = Array.from(rows).filter(row => row.style.display !== 'none').length;
-            updateInfoText(visibleCount);
-          }, 100);
         }
       } catch (e) {
         // DataTables not available or not initialized

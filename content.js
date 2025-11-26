@@ -10,241 +10,332 @@
   const Copy = window.TableExtensionCopy;
 
   /**
-   * Inject CSS to remove padding from .MiddleDiv
+   * Create and show toast notification with multiple messages
    */
-  function injectPageCSS() {
-    // Check if CSS is already injected
-    if (document.getElementById('extension-page-css')) {
-      return; // Already injected
+  function showToast(messages) {
+    // Remove existing toast if any
+    const existingToast = document.getElementById('extension-toast');
+    if (existingToast) {
+      existingToast.remove();
     }
 
-    // Check storage for toggle state (default to enabled)
-    chrome.storage.local.get(['extensionCSSEnabled'], function(result) {
-      const enabled = result.extensionCSSEnabled !== false; // Default to true
-      if (enabled) {
-        const style = document.createElement('style');
-        style.id = 'extension-page-css';
-        style.textContent = `
-          .MiddleDiv {
-            padding: 0 !important;
+    if (!messages || messages.length === 0) return;
+
+    // Add animation style if not exists
+    if (!document.getElementById('toast-animation-style')) {
+      const style = document.createElement('style');
+      style.id = 'toast-animation-style';
+      style.textContent = `
+        @keyframes slideIn {
+          from {
+            transform: translateX(-100%);
+            opacity: 0;
           }
-          .ce_border td {
-            padding: 0 !important;
+          to {
+            transform: translateX(0);
+            opacity: 1;
           }
-          .tabContentSection {
-            padding: 0 !important;
-          }
-          #article_data tbody tr {
-            height: auto !important;
-            min-height: auto !important;
-            max-height: none !important;
-          }
-          .colErrorMessage {
-            margin: 0 !important;
-          }
-          .fg-toolbar.ui-toolbar.ui-widget-header.ui-corner-tl.ui-corner-tr.ui-helper-clearfix {
-            display: flex !important;
-            justify-content: space-around !important;
-            align-items: center !important;
-          }
-          .dataTables_wrapper .ui-toolbar {
-            padding: 0 !important;
-          }
-          .dataTables-toolbar-wrapper {
-            display: flex !important;
-            align-items: center !important;
-          }
-          .dataTables_length {
-            width: auto !important;
-          }
-          .dataTables_filter {
-            width: auto !important;
-          }
-        `;
-        document.head.appendChild(style);
-        console.log('Page CSS injected');
-      }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Create toast container
+    const toast = document.createElement('div');
+    toast.id = 'extension-toast';
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background-color: #ff4444;
+      color: white;
+      padding: 16px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 10000;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      max-width: 500px;
+      max-height: 400px;
+      overflow-y: auto;
+      animation: slideIn 0.3s ease-out;
+    `;
+
+    // Create header with close button
+    const header = document.createElement('div');
+    header.style.cssText = `
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-bottom: 8px;
+    `;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '&times;';
+    closeBtn.style.cssText = `
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    `;
+    closeBtn.onmouseover = () => closeBtn.style.opacity = '1';
+    closeBtn.onmouseout = () => closeBtn.style.opacity = '0.8';
+    closeBtn.onclick = () => {
+      toast.style.animation = 'slideIn 0.3s ease-out reverse';
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.remove();
+        }
+      }, 300);
+    };
+
+    header.appendChild(closeBtn);
+    toast.appendChild(header);
+
+    // Create messages container
+    const messagesContainer = document.createElement('div');
+    messages.forEach((msgObj, index) => {
+      const messageDiv = document.createElement('div');
+      messageDiv.textContent = typeof msgObj === 'string' ? msgObj : msgObj.text;
+      messageDiv.style.cssText = `
+        margin-bottom: ${index < messages.length - 1 ? '8px' : '0'};
+        line-height: 1.5;
+      `;
+      messagesContainer.appendChild(messageDiv);
     });
-  }
 
-  /**
-   * Remove extension CSS
-   */
-  function removePageCSS() {
-    const style = document.getElementById('extension-page-css');
-    if (style) {
-      style.remove();
-      console.log('Page CSS removed');
-    }
-  }
+    toast.appendChild(messagesContainer);
+    document.body.appendChild(toast);
 
-  /**
-   * Toggle CSS based on state
-   */
-  function toggleCSS(enabled) {
-    if (enabled) {
-      // Inject CSS if not already present
-      if (!document.getElementById('extension-page-css')) {
-        const style = document.createElement('style');
-        style.id = 'extension-page-css';
-        style.textContent = `
-          .MiddleDiv {
-            padding: 0 !important;
+    // Auto remove after 30 seconds
+    const autoRemoveTimeout = setTimeout(() => {
+      if (toast.parentNode) {
+        toast.style.animation = 'slideIn 0.3s ease-out reverse';
+        setTimeout(() => {
+          if (toast.parentNode) {
+            toast.remove();
           }
-          .ce_border td {
-            padding: 0 !important;
-          }
-          .tabContentSection {
-            padding: 0 !important;
-          }
-          #article_data tbody tr {
-            height: auto !important;
-            min-height: auto !important;
-            max-height: none !important;
-          }
-          .colErrorMessage {
-            margin: 0 !important;
-          }
-          .fg-toolbar.ui-toolbar.ui-widget-header.ui-corner-tl.ui-corner-tr.ui-helper-clearfix {
-            display: flex !important;
-            justify-content: space-around !important;
-            align-items: center !important;
-          }
-          .dataTables_wrapper .ui-toolbar {
-            padding: 0 !important;
-          }
-          .dataTables-toolbar-wrapper {
-            display: flex !important;
-            align-items: center !important;
-          }
-          .dataTables_length {
-            width: auto !important;
-          }
-          .dataTables_filter {
-            width: auto !important;
-          }
-        `;
-        document.head.appendChild(style);
-        console.log('Page CSS enabled');
+        }, 300);
       }
-    } else {
-      removePageCSS();
-      console.log('Page CSS disabled');
-    }
+    }, 30000);
+
+    // Clear timeout if manually closed
+    const originalClose = closeBtn.onclick;
+    closeBtn.onclick = () => {
+      clearTimeout(autoRemoveTimeout);
+      originalClose();
+    };
   }
 
-  // Listen for messages from popup
-  chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-    if (request.type === 'toggleCSS') {
-      toggleCSS(request.enabled);
-      sendResponse({ success: true });
+  /**
+   * Parse date string in format "DD/MM/YYYY HH:MM AM/PM"
+   */
+  function parseDate(dateString) {
+    if (!dateString || dateString.trim() === '') return null;
+    
+    // Format: "26/11/2025 06:26 PM"
+    const parts = dateString.trim().split(' ');
+    if (parts.length < 2) return null;
+    
+    const datePart = parts[0]; // "26/11/2025"
+    const timePart = parts.slice(1).join(' '); // "06:26 PM"
+    
+    const [day, month, year] = datePart.split('/').map(Number);
+    if (!day || !month || !year) return null;
+    
+    // Create date object (month is 0-indexed in JS)
+    const date = new Date(year, month - 1, day);
+    
+    // Parse time if available
+    if (timePart) {
+      const timeMatch = timePart.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1]);
+        const minutes = parseInt(timeMatch[2]);
+        const ampm = timeMatch[3].toUpperCase();
+        
+        if (ampm === 'PM' && hours !== 12) hours += 12;
+        if (ampm === 'AM' && hours === 12) hours = 0;
+        
+        date.setHours(hours, minutes, 0, 0);
+      }
     }
-    return true;
-  });
+    
+    return date;
+  }
 
   /**
-   * Create dataTables_info and pagination elements inside toolbar container
+   * Check if date is in the past (before today)
    */
-  function createDataTablesInfo() {
-    // Find the toolbar container
-    const toolbar = document.querySelector('.fg-toolbar.ui-toolbar.ui-widget-header.ui-corner-tl.ui-corner-tr.ui-helper-clearfix');
-    
-    if (!toolbar) {
-      console.log('Toolbar container not found');
+  function isPastDate(date) {
+    if (!date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+    return compareDate < today;
+  }
+
+  /**
+   * Calculate hours delayed (difference between now and assign date)
+   */
+  function calculateDelayedHours(assignDate) {
+    if (!assignDate) return 0;
+    const now = new Date();
+    const diffMs = now - assignDate;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    return diffHours;
+  }
+
+  /**
+   * Check for past due files and show toast
+   */
+  function checkPastDueFiles() {
+    const table = Utils.getTable();
+    if (!table) return;
+
+    const assignDateIndex = Utils.findColumnIndex(table, 'Assign Date');
+    const doneByIndex = Utils.findColumnIndex(table, 'DONE BY');
+    const articleIdIndex = Utils.findColumnIndex(table, 'Article ID');
+
+    if (assignDateIndex === -1 || doneByIndex === -1) {
+      console.log('Required columns not found for past due check');
       return;
     }
 
-    // Check if wrapper already exists
-    let wrapper = toolbar.querySelector('.dataTables-toolbar-wrapper');
-    if (!wrapper) {
-      wrapper = document.createElement('div');
-      wrapper.className = 'dataTables-toolbar-wrapper';
-      toolbar.appendChild(wrapper);
-    }
+    const rows = Utils.getTableRows(table);
+    const pastDueFiles = [];
 
-    // Check if dataTables_info already exists
-    let infoDiv = document.getElementById('article_data_info');
+    rows.forEach((row) => {
+      // Skip hidden rows
+      if (row.style.display === 'none') return;
+
+      const cells = Array.from(row.querySelectorAll('td'));
+      if (cells.length <= Math.max(assignDateIndex, doneByIndex)) return;
+
+      const assignDateText = cells[assignDateIndex]?.textContent.trim() || '';
+      const doneBy = cells[doneByIndex]?.textContent.trim() || '-';
+      const articleId = articleIdIndex !== -1 ? (cells[articleIdIndex]?.textContent.trim() || '') : '';
+
+      if (!assignDateText) return;
+
+      const assignDate = parseDate(assignDateText);
+      if (assignDate && isPastDate(assignDate)) {
+        const delayedHours = calculateDelayedHours(assignDate);
+        pastDueFiles.push({
+          name: doneBy,
+          articleId: articleId,
+          delayedHours: delayedHours
+        });
+      }
+    });
+
+    if (pastDueFiles.length === 0) return;
+
+    // Group by name and calculate max delayed hours per person
+    const groupedByName = {};
+    pastDueFiles.forEach(file => {
+      if (!groupedByName[file.name]) {
+        groupedByName[file.name] = {
+          articleIds: [],
+          maxDelayedHours: 0
+        };
+      }
+      if (file.articleId) {
+        groupedByName[file.name].articleIds.push(file.articleId);
+      }
+      // Track the maximum delayed hours for this person
+      if (file.delayedHours > groupedByName[file.name].maxDelayedHours) {
+        groupedByName[file.name].maxDelayedHours = file.delayedHours;
+      }
+    });
+
+    // Create messages with delayed hours
+    const messages = [];
+    Object.keys(groupedByName).forEach(name => {
+      const group = groupedByName[name];
+      const displayName = name === '-' ? 'Someone' : name;
+      const count = group.articleIds.length;
+      const articleList = group.articleIds.length > 0 ? group.articleIds.join(', ') : 'N/A';
+      const hours = group.maxDelayedHours;
+      const hoursText = hours >= 24 ? `${Math.floor(hours / 24)} days` : `${hours} hours`;
+      const message = {
+        text: `${displayName} didn't uploaded ${count} ${count === 1 ? 'yesterday file' : 'yesterday files'} (${articleList}) [${hoursText}]`,
+        hours: group.maxDelayedHours
+      };
+      messages.push(message);
+    });
+
+    // Sort by delayed hours (highest first)
+    messages.sort((a, b) => b.hours - a.hours);
+
+    // Extract text from message objects for display
+    const messageTexts = messages.map(msg => typeof msg === 'string' ? msg : msg.text);
     
-    if (!infoDiv) {
-      // Create the dataTables_info div
-      infoDiv = document.createElement('div');
-      infoDiv.className = 'dataTables_info';
-      infoDiv.id = 'article_data_info';
-      infoDiv.textContent = 'Showing 1 to 4 of 4 entries';
-    } else {
-      // If it exists but is not in the wrapper, move it
-      if (infoDiv.parentNode !== wrapper) {
-        infoDiv.remove();
+    // Show all messages in one toast
+    showToast(messageTexts);
+  }
+
+
+
+  /**
+   * Set default page length to 500
+   * Returns true if successful, false otherwise
+   */
+  function setDefaultPageLength() {
+    let success = false;
+    
+    // Wait for DataTables to be initialized
+    if (window.jQuery && window.jQuery.fn.dataTable) {
+      try {
+        const dataTable = window.jQuery('#article_data').DataTable();
+        if (dataTable) {
+          // Set page length to 500 using DataTables API
+          dataTable.page.len(500).draw();
+          console.log('Set page length to 500 via API');
+          success = true;
+        }
+      } catch (e) {
+        console.log('Could not set page length via API:', e);
       }
     }
     
-    // Add infoDiv to wrapper if not already there
-    if (!wrapper.contains(infoDiv)) {
-      wrapper.appendChild(infoDiv);
-    }
-
-    // Check if pagination already exists
-    let paginateDiv = document.getElementById('article_data_paginate');
-    
-    if (!paginateDiv) {
-      // Create the pagination div
-      paginateDiv = document.createElement('div');
-      paginateDiv.className = 'dataTables_paginate fg-buttonset ui-buttonset fg-buttonset-multi ui-buttonset-multi paging_full_numbers';
-      paginateDiv.id = 'article_data_paginate';
-      
-      // Create First button
-      const firstBtn = document.createElement('a');
-      firstBtn.tabIndex = 0;
-      firstBtn.className = 'first ui-corner-tl ui-corner-bl fg-button ui-button ui-state-default ui-state-disabled';
-      firstBtn.id = 'article_data_first';
-      firstBtn.textContent = 'First';
-      paginateDiv.appendChild(firstBtn);
-      
-      // Create Previous button
-      const prevBtn = document.createElement('a');
-      prevBtn.tabIndex = 0;
-      prevBtn.className = 'previous fg-button ui-button ui-state-default ui-state-disabled';
-      prevBtn.id = 'article_data_previous';
-      prevBtn.textContent = 'Previous';
-      paginateDiv.appendChild(prevBtn);
-      
-      // Create page number span
-      const pageSpan = document.createElement('span');
-      const pageBtn = document.createElement('a');
-      pageBtn.tabIndex = 0;
-      pageBtn.className = 'fg-button ui-button ui-state-default ui-state-disabled';
-      pageBtn.textContent = '1';
-      pageSpan.appendChild(pageBtn);
-      paginateDiv.appendChild(pageSpan);
-      
-      // Create Next button
-      const nextBtn = document.createElement('a');
-      nextBtn.tabIndex = 0;
-      nextBtn.className = 'next fg-button ui-button ui-state-default ui-state-disabled';
-      nextBtn.id = 'article_data_next';
-      nextBtn.textContent = 'Next';
-      paginateDiv.appendChild(nextBtn);
-      
-      // Create Last button
-      const lastBtn = document.createElement('a');
-      lastBtn.tabIndex = 0;
-      lastBtn.className = 'last ui-corner-tr ui-corner-br fg-button ui-button ui-state-default ui-state-disabled';
-      lastBtn.id = 'article_data_last';
-      lastBtn.textContent = 'Last';
-      paginateDiv.appendChild(lastBtn);
-    } else {
-      // If it exists but is not in the wrapper, move it
-      if (paginateDiv.parentNode !== wrapper) {
-        paginateDiv.remove();
+    // Also update the select element directly
+    const lengthSelect = document.querySelector('select[name="article_data_length"]');
+    if (lengthSelect) {
+      // Check if 500 option exists, if not add it
+      let option500 = lengthSelect.querySelector('option[value="500"]');
+      if (!option500) {
+        option500 = document.createElement('option');
+        option500.value = '500';
+        option500.textContent = '500';
+        lengthSelect.appendChild(option500);
       }
+      
+      // Set 500 as selected
+      lengthSelect.value = '500';
+      
+      // Trigger change event to update DataTables if API method didn't work
+      if (!success) {
+        const changeEvent = new Event('change', { bubbles: true });
+        lengthSelect.dispatchEvent(changeEvent);
+      }
+      
+      console.log('Updated length select to 500');
+      success = true;
     }
     
-    // Add paginateDiv to wrapper if not already there
-    if (!wrapper.contains(paginateDiv)) {
-      wrapper.appendChild(paginateDiv);
-    }
-    
-    console.log('dataTables_info and pagination elements created inside wrapper');
+    return success;
   }
 
   /**
@@ -304,14 +395,33 @@
    */
   async function initialize() {
     try {
-      // Inject page CSS first
-      injectPageCSS();
-      
       // Wait for table to be available
       await Utils.waitForElement('#article_data', 10000);
       
-      // Create dataTables_info element
-      createDataTablesInfo();
+      // Wait for DataTables to be initialized
+      let dataTableReady = false;
+      if (window.jQuery && window.jQuery.fn.dataTable) {
+        try {
+          const dataTable = window.jQuery('#article_data').DataTable();
+          if (dataTable) {
+            dataTableReady = true;
+          }
+        } catch (e) {
+          // DataTables not ready yet, wait a bit
+        }
+      }
+      
+      // Wait a bit for DataTables to fully initialize if needed
+      if (!dataTableReady) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      // Set page length to 500 IMMEDIATELY before anything else
+      let retryCount = 0;
+      while (!setDefaultPageLength() && retryCount < 10) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        retryCount++;
+      }
       
       // Add the column first
       Table.addDoneByColumn();
@@ -322,7 +432,7 @@
       // Initialize copy button
       Copy.initializeCopyButton();
       
-      // Fetch data from API (non-blocking)
+      // NOW fetch data from API after page length is set
       if (!API.isCurrentlyFetching()) {
         Table.showLoadingStatus();
         API.fetchDoneByData()
@@ -333,6 +443,8 @@
             // Explicitly call highlightRows after a short delay to ensure it runs
             setTimeout(() => {
               Table.highlightRows();
+              // Check for past due files and show toast
+              checkPastDueFiles();
             }, 200);
           })
           .catch(err => {
@@ -363,16 +475,21 @@
   let delayedInitDone = false;
   setTimeout(() => {
     if (!delayedInitDone) {
-      // Inject CSS if not already done
-      injectPageCSS();
-      
       const table = Utils.getTable();
       if (table) {
-        createDataTablesInfo();
         Table.addDoneByColumn();
         Filter.initializeFilter();
         Copy.initializeCopyButton();
-        API.fetchDoneByData().catch(err => console.error('Delayed fetch failed:', err));
+        API.fetchDoneByData()
+          .then(() => {
+            setTimeout(() => {
+              checkPastDueFiles();
+            }, 500);
+          })
+          .catch(err => console.error('Delayed fetch failed:', err));
+        setTimeout(() => {
+          setDefaultPageLength();
+        }, 1500);
         delayedInitDone = true;
       }
     }
@@ -392,11 +509,19 @@
         );
         if (!existingHeader && !observerTriggered) {
           observerTriggered = true;
-          createDataTablesInfo();
           Table.addDoneByColumn();
           Filter.initializeFilter();
           Copy.initializeCopyButton();
-          API.fetchDoneByData().catch(err => console.error('Observer fetch failed:', err));
+          API.fetchDoneByData()
+            .then(() => {
+              setTimeout(() => {
+                checkPastDueFiles();
+              }, 500);
+            })
+            .catch(err => console.error('Observer fetch failed:', err));
+          setTimeout(() => {
+            setDefaultPageLength();
+          }, 1500);
         }
       }
     }
@@ -408,18 +533,6 @@
     subtree: true
   });
 
-  // Observer to create dataTables_info and pagination when toolbar appears
-  const toolbarObserver = new MutationObserver(() => {
-    const toolbar = document.querySelector('.fg-toolbar.ui-toolbar.ui-widget-header.ui-corner-tl.ui-corner-tr.ui-helper-clearfix');
-    if (toolbar && (!document.getElementById('article_data_info') || !document.getElementById('article_data_paginate'))) {
-      createDataTablesInfo();
-    }
-  });
-
-  toolbarObserver.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
 
   // Run when DOM is ready
   if (document.readyState === 'loading') {
