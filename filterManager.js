@@ -48,12 +48,23 @@ window.TableExtensionFilter = (function() {
     if (!filterButton) return;
     
     const texCount = countTexRows();
-    const countText = texCount > 0 ? ` (${texCount})` : '';
+    const countText = ` (${texCount})`; // Always show count, even if 0
     
     if (isFilterEnabled) {
       filterButton.textContent = `Show TEX Rows${countText}`;
     } else {
       filterButton.textContent = `Hide TEX Rows${countText}`;
+    }
+    
+    // Disable button if no TEX rows
+    if (texCount === 0) {
+      filterButton.disabled = true;
+      filterButton.style.opacity = '0.5';
+      filterButton.style.cursor = 'not-allowed';
+    } else {
+      filterButton.disabled = false;
+      filterButton.style.opacity = '1';
+      filterButton.style.cursor = 'pointer';
     }
   }
 
@@ -186,8 +197,12 @@ window.TableExtensionFilter = (function() {
     
     // Get initial count and set text
     const texCount = countTexRows();
-    const countText = texCount > 0 ? ` (${texCount})` : '';
+    const countText = ` (${texCount})`; // Always show count, even if 0
     button.textContent = isFilterEnabled ? `Show TEX Rows${countText}` : `Hide TEX Rows${countText}`;
+    
+    // Disable button if no TEX rows
+    const isDisabled = texCount === 0;
+    button.disabled = isDisabled;
     
     button.style.cssText = `
       padding: 4px 12px;
@@ -197,7 +212,7 @@ window.TableExtensionFilter = (function() {
       color: white;
       border: none;
       border-radius: 4px;
-      cursor: pointer;
+      cursor: ${isDisabled ? 'not-allowed' : 'pointer'};
       font-size: 13px;
       font-weight: 600;
       transition: background 0.2s;
@@ -205,9 +220,11 @@ window.TableExtensionFilter = (function() {
       vertical-align: middle;
       height: 28px;
       line-height: 20px;
+      opacity: ${isDisabled ? '0.5' : '1'};
     `;
 
     button.addEventListener('click', () => {
+      if (button.disabled) return; // Don't toggle if disabled
       const newState = toggleFilter();
       updateButtonText();
       button.style.background = newState ? '#667eea' : '#95a5a6';
