@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Extension Settings</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 340px;
+      padding: 0;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #2d3748;
+    }
+    
+    .container {
+      background: #ffffff;
+      border-radius: 12px 12px 0 0;
+      min-height: 100vh;
+      padding: 24px 20px;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f7fafc;
+    }
+    
+    .header-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1a202c;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.5px;
+    }
+    
+    .header-subtitle {
+      font-size: 12px;
+      color: #718096;
+      margin: 0;
+    }
+    
+    .section {
+      background: #f7fafc;
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 16px;
+      border: 1px solid #e2e8f0;
+      transition: all 0.2s ease;
+    }
+    
+    .section:hover {
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+      border-color: #cbd5e0;
+    }
+    
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #2d3748;
+      margin: 0 0 14px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 2px;
+    }
+    
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: #ffffff;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
+    }
+    
+    .toggle-container:hover {
+      border-color: #cbd5e0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    
+    .toggle-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: #2d3748;
+      flex: 1;
+    }
+    
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 28px;
+      background-color: #cbd5e0;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .toggle-switch.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+    }
+    
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background-color: #ffffff;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .toggle-switch.active::after {
+      transform: translateX(22px);
+    }
+    
+    .helper-text {
+      font-size: 12px;
+      color: #718096;
+      margin-top: 8px;
+      line-height: 1.5;
+      padding-left: 4px;
+    }
+    
+    .interval-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      padding: 12px 16px;
+      background: #ffffff;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      transition: all 0.2s ease;
+    }
+    
+    .interval-container:hover {
+      border-color: #cbd5e0;
+    }
+    
+    .interval-container:focus-within {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .interval-label {
+      font-size: 13px;
+      color: #4a5568;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    
+    input[type="number"] {
+      width: 70px;
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      text-align: center;
+      background: #ffffff;
+      color: #2d3748;
+      transition: all 0.2s ease;
+    }
+    
+    input[type="number"]:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      opacity: 1;
+      height: 20px;
+    }
+    
+    .interval-unit {
+      font-size: 13px;
+      color: #718096;
+      font-weight: 500;
+    }
+    
+    select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      background-color: #ffffff;
+      color: #2d3748;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234a5568' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+    
+    select:hover {
+      border-color: #cbd5e0;
+    }
+    
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .status {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      text-align: center;
+      display: none;
+      font-weight: 500;
+      animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .status.success {
+      background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+      color: #22543d;
+      border: 1px solid #68d391;
+    }
+    
+    .status.error {
+      background: linear-gradient(135deg, #fed7d7 0%, #fc8181 100%);
+      color: #742a2a;
+      border: 1px solid #f56565;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="header-title">Porwertrack 3&4 Settings</h1>
+      <p class="header-subtitle">Configure your notifications</p>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">Notifications</div>
+      <div class="toggle-container">
+        <span class="toggle-label">Enable</span>
+        <div id="notification-toggle" class="toggle-switch"></div>
+      </div>
+      <div class="helper-text">Get alerts for files that need attention</div>
+      <div class="interval-container">
+        <span class="interval-label">Check every</span>
+        <input type="number" id="check-interval" min="1" max="10" value="3" />
+        <span class="interval-unit">hours</span>
+      </div>
+      <div class="helper-text">How often to check for updates (1-10 hours)</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Monitor</div>
+      <select id="profile-select">
+        <option value="">-- Select Profile --</option>
+        <!-- Options are dynamically populated by popup.js -->
+      </select>
+      <div class="helper-text">Choose a person or "ALL" to monitor everyone</div>
+    </div>
+
+    <div id="status" class="status"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
+

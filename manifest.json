@@ -5,7 +5,8 @@
   "description": "Flowers for you",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "notifications"
   ],
   "host_permissions": [
     "https://powertrack3.aptaracorp.com/*",
@@ -26,6 +27,7 @@
         "toastManager.js",
         "statsManager.js",
         "pastDueManager.js",
+        "notificationManager.js",
         "content.js"
       ],
       "run_at": "document_idle"
@@ -39,6 +41,7 @@
     "128": "icons/logo-128.png"
   },
   "action": {
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/logo-16.png",
       "32": "icons/logo-32.png",
@@ -46,6 +49,9 @@
       "48": "icons/logo-48.png",
       "128": "icons/logo-128.png"
     }
+  },
+  "background": {
+    "service_worker": "background.js"
   }
 }
 
