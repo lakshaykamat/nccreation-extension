@@ -1,5 +1,21 @@
 // API Service for fetching data - Global namespace
 
+/**
+ * @typedef {Object} ApiResponseItem
+ * @property {number} row_number
+ * @property {string} Month
+ * @property {string} Date
+ * @property {string} Article number
+ * @property {number|string} Pages
+ * @property {string} Completed - "Completed" | "Not started"
+ * @property {string} Done by
+ * @property {string|number} Time
+ */
+
+/**
+ * @typedef {ApiResponseItem[]} ApiResponse
+ */
+
 window.TableExtensionAPI = (function() {
   'use strict';
 
@@ -8,6 +24,8 @@ window.TableExtensionAPI = (function() {
 
   // State management
   let articleDoneByMap = new Map();
+  /** @type {ApiResponse|null} */
+  let apiResponseData = null;
   let isFetching = false;
   let hasFetched = false;
   let fetchPromise = null;
@@ -18,6 +36,14 @@ window.TableExtensionAPI = (function() {
    */
   function getArticleMap() {
     return articleDoneByMap;
+  }
+
+  /**
+   * Get the full API response data
+   * @returns {ApiResponse|null}
+   */
+  function getApiResponseData() {
+    return apiResponseData;
   }
 
   /**
@@ -44,13 +70,11 @@ window.TableExtensionAPI = (function() {
   async function fetchDoneByData(forceRefresh = false) {
     // If we already have data and not forcing refresh, skip
     if (hasFetched && !forceRefresh) {
-      console.log('Data already fetched, skipping...');
       return;
     }
     
     // If fetch is already in progress, return the existing promise
     if (isFetching && fetchPromise) {
-      console.log('Fetch already in progress, reusing promise...');
       return fetchPromise;
     }
     
@@ -75,11 +99,16 @@ window.TableExtensionAPI = (function() {
           timeoutPromise
         ]);
         
-        if (!response.ok) {
+        // Check for error status codes (4xx, 5xx)
+        if (!response.ok || response.status >= 400) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
+        /** @type {ApiResponse} */
         const data = await response.json();
+        
+        // Store the full API response data
+        apiResponseData = data;
         
         // Create a map of Article number -> Done by
         articleDoneByMap.clear();
@@ -91,12 +120,10 @@ window.TableExtensionAPI = (function() {
           });
         }
         
-        console.log(`Loaded ${articleDoneByMap.size} article assignments from API`);
         hasFetched = true;
         
         return articleDoneByMap;
       } catch (error) {
-        console.error('Error fetching done by data:', error);
         hasFetched = false; // Reset flag on error so we can retry
         throw error;
       } finally {
@@ -111,6 +138,7 @@ window.TableExtensionAPI = (function() {
   // Public API
   return {
     getArticleMap,
+    getApiResponseData,
     hasDataFetched,
     isCurrentlyFetching,
     fetchDoneByData

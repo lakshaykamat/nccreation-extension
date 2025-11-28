@@ -23,6 +23,9 @@
         "tableManager.js",
         "filterManager.js",
         "copyManager.js",
+        "toastManager.js",
+        "statsManager.js",
+        "pastDueManager.js",
         "content.js"
       ],
       "run_at": "document_idle"

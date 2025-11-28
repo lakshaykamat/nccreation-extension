@@ -87,7 +87,6 @@ window.TableExtensionFilter = (function() {
 
     const srcColumnIndex = Utils.findColumnIndex(table, SRC_COLUMN);
     if (srcColumnIndex === -1) {
-      console.log('SRC column not found');
       return;
     }
 
@@ -110,8 +109,6 @@ window.TableExtensionFilter = (function() {
       }
     });
 
-    console.log(`Filter ${isFilterEnabled ? 'enabled' : 'disabled'}: ${hiddenCount} rows hidden, ${visibleCount} rows visible`);
-    
     // Update button text with count
     updateButtonText();
     
@@ -244,7 +241,6 @@ window.TableExtensionFilter = (function() {
     // Find the search/filter div to add button next to search bar
     const filterDiv = document.querySelector('#article_data_wrapper .dataTables_filter');
     if (!filterDiv) {
-      console.log('Filter div not found, retrying...');
       setTimeout(initializeFilter, 1000);
       return;
     }
@@ -281,8 +277,6 @@ window.TableExtensionFilter = (function() {
 
     // Apply filter by default
     applyFilter();
-    
-    console.log('Filter initialized');
   }
 
   // Public API

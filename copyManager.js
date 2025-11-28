@@ -20,7 +20,6 @@ window.TableExtensionCopy = (function() {
     const doneByIndex = Utils.findColumnIndex(table, DONE_BY_COLUMN);
 
     if (articleIdIndex === -1 || doneByIndex === -1) {
-      console.log('Required columns not found');
       return [];
     }
 
@@ -91,7 +90,6 @@ window.TableExtensionCopy = (function() {
         showCopyFeedback(true);
       }
     } catch (error) {
-      console.error('Failed to copy:', error);
       showCopyFeedback(false);
     }
   }
@@ -180,7 +178,6 @@ window.TableExtensionCopy = (function() {
     // Find the filter div to add button next to search bar
     const filterDiv = document.querySelector('#article_data_wrapper .dataTables_filter');
     if (!filterDiv) {
-      console.log('Filter div not found for copy button, retrying...');
       setTimeout(initializeCopyButton, 1000);
       return;
     }
@@ -211,8 +208,6 @@ window.TableExtensionCopy = (function() {
     } else {
       filterDiv.appendChild(button);
     }
-    
-    console.log('Copy button initialized');
   }
 
   // Public API

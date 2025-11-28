@@ -131,6 +131,113 @@ window.TableExtensionUtils = (function() {
     });
   }
 
+  /**
+   * Parse date string in format "DD/MM/YYYY"
+   * @param {string} dateStr - Date string
+   * @returns {Date|null}
+   */
+  function parseDateString(dateStr) {
+    if (!dateStr) return null;
+    const parts = dateStr.trim().split('/');
+    if (parts.length !== 3) return null;
+    const [day, month, year] = parts.map(Number);
+    if (!day || !month || !year) return null;
+    return new Date(year, month - 1, day);
+  }
+
+  /**
+   * Format date as DD/MM/YYYY
+   * @param {Date} date - Date object
+   * @returns {string}
+   */
+  function formatDate(date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
+  /**
+   * Parse date string with time in format "DD/MM/YYYY HH:MM AM/PM"
+   * @param {string} dateString - Date string with time
+   * @returns {Date|null}
+   */
+  function parseDate(dateString) {
+    if (!dateString || dateString.trim() === '') return null;
+    
+    // Format: "26/11/2025 06:26 PM"
+    const parts = dateString.trim().split(' ');
+    if (parts.length < 2) return null;
+    
+    const datePart = parts[0]; // "26/11/2025"
+    const timePart = parts.slice(1).join(' '); // "06:26 PM"
+    
+    const [day, month, year] = datePart.split('/').map(Number);
+    if (!day || !month || !year) return null;
+    
+    // Create date object (month is 0-indexed in JS)
+    const date = new Date(year, month - 1, day);
+    
+    // Parse time if available
+    if (timePart) {
+      const timeMatch = timePart.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1]);
+        const minutes = parseInt(timeMatch[2]);
+        const ampm = timeMatch[3].toUpperCase();
+        
+        if (ampm === 'PM' && hours !== 12) hours += 12;
+        if (ampm === 'AM' && hours === 12) hours = 0;
+        
+        date.setHours(hours, minutes, 0, 0);
+      }
+    }
+    
+    return date;
+  }
+
+  /**
+   * Generate unique abbreviations for names
+   * Ensures no two names have the same abbreviation
+   * @param {string[]} names - Array of names
+   * @returns {Map<string, string>} - Map of name to abbreviation
+   */
+  function generateUniqueAbbreviations(names) {
+    const abbrevMap = new Map();
+    const usedAbbrevs = new Set();
+    
+    // First pass: try to assign first 3 characters
+    names.forEach(name => {
+      if (!name || name.trim() === '') return;
+      
+      let abbrev = name.substring(0, 3).toUpperCase();
+      let originalAbbrev = abbrev;
+      let counter = 3;
+      
+      // If abbreviation already used, try to make it unique
+      while (usedAbbrevs.has(abbrev)) {
+        // Try using more characters from the name
+        if (name.length > counter) {
+          abbrev = name.substring(0, counter + 1).toUpperCase();
+          counter++;
+        } else {
+          // If name is too short, append a number
+          abbrev = originalAbbrev + '1';
+          let num = 1;
+          while (usedAbbrevs.has(abbrev)) {
+            num++;
+            abbrev = originalAbbrev + num;
+          }
+        }
+      }
+      
+      usedAbbrevs.add(abbrev);
+      abbrevMap.set(name, abbrev);
+    });
+    
+    return abbrevMap;
+  }
+
   // Public API
   return {
     getTable,
@@ -140,7 +247,11 @@ window.TableExtensionUtils = (function() {
     getTableRows,
     getCellValue,
     debounce,
-    waitForElement
+    waitForElement,
+    parseDateString,
+    formatDate,
+    parseDate,
+    generateUniqueAbbreviations
   };
 })();
 
