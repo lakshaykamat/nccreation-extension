@@ -17,10 +17,9 @@
   const POST_FETCH_DELAY = 200;
 
   /**
-   * Initialize core components
+   * Initialize core components (without Done By column)
    */
   function initializeComponents() {
-    Table.addDoneByColumn();
     Filter.initializeFilter();
     Copy.initializeCopyButton();
   }
@@ -41,6 +40,8 @@
     if (showLoading) {
       Table.removeLoadingStatus();
     }
+    // Add Done By column after API response
+    Table.addDoneByColumn();
     refreshTableData();
     setTimeout(() => {
       Table.highlightRows();

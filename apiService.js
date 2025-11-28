@@ -19,8 +19,8 @@
 window.TableExtensionAPI = (function() {
   'use strict';
 
-  const API_URL = 'https://n8n-ex6e.onrender.com/webhook/powertrack3';
-  const TIMEOUT = 30000; // 30 seconds
+  const API_URL = 'https://n8n-ex6e.onrender.com/webhook/last-five-days-files';
+  const TIMEOUT = 20000; // 20 seconds
 
   // State management
   let articleDoneByMap = new Map();
