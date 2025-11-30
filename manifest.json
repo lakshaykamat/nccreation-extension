@@ -19,16 +19,16 @@
         "https://powertrack4.aptaracorp.com/AptaraVendorAPI/vendorWorkflow.html"
       ],
       "js": [
-        "utils.js",
-        "apiService.js",
-        "tableManager.js",
-        "filterManager.js",
-        "copyManager.js",
-        "toastManager.js",
-        "statsManager.js",
-        "pastDueManager.js",
-        "notificationManager.js",
-        "content.js"
+        "src/utils/utils.js",
+        "src/services/apiService.js",
+        "src/managers/tableManager.js",
+        "src/managers/filterManager.js",
+        "src/managers/copyManager.js",
+        "src/managers/toastManager.js",
+        "src/managers/statsManager.js",
+        "src/managers/pastDueManager.js",
+        "src/services/notificationService.js",
+        "src/ui/content.js"
       ],
       "run_at": "document_idle"
     }

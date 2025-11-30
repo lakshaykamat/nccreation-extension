@@ -1,4 +1,4 @@
-// Notification Manager - Handles Chrome system notifications - Global namespace
+// Notification Service - Handles Chrome system notifications - Global namespace
 
 window.TableExtensionNotification = (function() {
   'use strict';
