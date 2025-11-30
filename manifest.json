@@ -21,6 +21,8 @@
       "js": [
         "src/utils/utils.js",
         "src/services/apiService.js",
+        "src/lib/sortManager.js",
+        "src/lib/headerBuilder.js",
         "src/managers/tableManager.js",
         "src/managers/filterManager.js",
         "src/managers/copyManager.js",

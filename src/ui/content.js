@@ -43,6 +43,8 @@
     }
     // Add Done By column after API response
     Table.addDoneByColumn();
+    // Replace table header with new structure after DONE BY column is added
+    Table.replaceTableHeader();
     refreshTableData();
     setTimeout(() => {
       Table.highlightRows();

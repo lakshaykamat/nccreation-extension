@@ -5,6 +5,7 @@ window.TableExtensionTable = (function () {
 
   const Utils = window.TableExtensionUtils;
   const API = window.TableExtensionAPI;
+  const HeaderBuilder = window.TableExtensionHeaderBuilder;
   const ARTICLE_ID_COLUMN = 'Article ID';
   const DONE_BY_COLUMN = 'DONE BY';
 
@@ -152,20 +153,23 @@ window.TableExtensionTable = (function () {
 
       // Get or create DONE BY cell - verify we're writing to the correct column
       const doneBy = articleMap.get(articleId) || '-';
+      
       if (cells.length > doneByHeaderIndex) {
+        // Cell exists at the correct position
         const doneByCell = cells[doneByHeaderIndex];
-        // Verify this cell is in the DONE BY column by checking its position matches header
         doneByCell.textContent = doneBy;
         populatedCount++;
       } else {
         // Cell doesn't exist, need to add it after Article ID
         const articleIdCell = cells[articleIdIndex];
-        const newCell = document.createElement('td');
-        newCell.align = 'center';
-        newCell.className = ' ';
-        newCell.textContent = doneBy;
-        articleIdCell.insertAdjacentElement('afterend', newCell);
-        populatedCount++;
+        if (articleIdCell) {
+          const newCell = document.createElement('td');
+          newCell.align = 'center';
+          newCell.className = ' ';
+          newCell.textContent = doneBy;
+          articleIdCell.insertAdjacentElement('afterend', newCell);
+          populatedCount++;
+        }
       }
     });
 
@@ -370,6 +374,23 @@ window.TableExtensionTable = (function () {
     }, 500);
   }
 
+  /**
+   * Replace the entire table header with new structure
+   */
+  function replaceTableHeader() {
+    HeaderBuilder.replaceTableHeader(highlightRows);
+  }
+
+  /**
+   * Handle column sorting (wrapper for sort manager)
+   * @param {number} columnIndex - Column index to sort
+   * @param {HTMLElement} headerCell - Header cell element
+   */
+  function handleColumnSort(columnIndex, headerCell) {
+    const Sort = window.TableExtensionSort;
+    Sort.handleColumnSort(columnIndex, headerCell, highlightRows);
+  }
+
   // Public API
   return {
     showLoadingStatus,
@@ -377,6 +398,9 @@ window.TableExtensionTable = (function () {
     populateDoneByColumn,
     addDoneByColumn,
     enableSortingOnDoneByColumn,
-    highlightRows
+    highlightRows,
+    replaceTableHeader,
+    handleColumnSort
   };
 })();
+
