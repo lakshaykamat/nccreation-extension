@@ -149,3 +149,4 @@ window.TableExtensionSort = (function() {
     handleColumnSort
   };
 })();
+

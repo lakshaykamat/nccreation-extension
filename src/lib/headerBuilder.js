@@ -139,3 +139,4 @@ window.TableExtensionHeaderBuilder = (function() {
     getHeaderConfig: () => HEADER_CONFIG
   };
 })();
+
