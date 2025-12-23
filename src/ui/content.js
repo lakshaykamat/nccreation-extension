@@ -178,11 +178,7 @@
       // PHASE 6: Run post-processing in PARALLEL
       await Promise.all([
         Promise.resolve().then(() => PastDue.checkPastDueFiles(Toast.showToast)),
-        Promise.resolve().then(() => Stats.displayTodayStats(Toast.showToast)),
-        Notification.sendNotification('Extension Loaded', {
-          body: 'Table extension initialized',
-          tag: 'extension-init'
-        })
+        Promise.resolve().then(() => Stats.displayTodayStats(Toast.showToast))
       ]);
 
     } catch (error) {
