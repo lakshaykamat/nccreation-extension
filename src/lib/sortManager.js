@@ -4,6 +4,7 @@ window.TableExtensionSort = (function() {
   'use strict';
 
   const Utils = window.TableExtensionUtils;
+  const SRC_COLUMN = 'SRC';
 
   // Track current sort state: { columnIndex: 'asc' | 'desc' | null }
   let sortState = {};
@@ -50,32 +51,6 @@ window.TableExtensionSort = (function() {
     }
   }
 
-  /**
-   * Compare two cell values for sorting
-   * @param {string} valueA - First value
-   * @param {string} valueB - Second value
-   * @returns {number} - Comparison result
-   */
-  function compareCellValues(valueA, valueB) {
-    // Try to parse as number for numeric columns
-    const numA = parseFloat(valueA);
-    const numB = parseFloat(valueB);
-    const isNumeric = !isNaN(numA) && !isNaN(numB) && valueA !== '' && valueB !== '';
-
-    if (isNumeric) {
-      return numA - numB;
-    }
-
-    // Date parsing for date columns
-    const dateA = Utils.parseDate(valueA) || Utils.parseDateString(valueA);
-    const dateB = Utils.parseDate(valueB) || Utils.parseDateString(valueB);
-    if (dateA && dateB) {
-      return dateA - dateB;
-    }
-
-    // Fallback to string comparison
-    return valueA.localeCompare(valueB);
-  }
 
   /**
    * Handle column sorting
@@ -108,8 +83,23 @@ window.TableExtensionSort = (function() {
       }
     });
 
-    // Sort rows
+    // Get SRC column index for TEX detection
+    const srcColumnIndex = Utils.findColumnIndex(table, SRC_COLUMN);
+
+    // Sort rows - TEX rows always go to bottom
     rows.sort((a, b) => {
+      const isATex = Utils.isTexRow(a, srcColumnIndex);
+      const isBTex = Utils.isTexRow(b, srcColumnIndex);
+
+      // If one is TEX and the other is not, TEX always goes to bottom
+      if (isATex && !isBTex) {
+        return 1; // A (TEX) goes after B
+      }
+      if (!isATex && isBTex) {
+        return -1; // A goes before B (TEX)
+      }
+      // If both are TEX or both are not TEX, sort normally
+
       const cellsA = Array.from(a.querySelectorAll('td'));
       const cellsB = Array.from(b.querySelectorAll('td'));
 
@@ -120,7 +110,7 @@ window.TableExtensionSort = (function() {
       const valueA = cellsA[columnIndex].textContent.trim();
       const valueB = cellsB[columnIndex].textContent.trim();
 
-      const comparison = compareCellValues(valueA, valueB);
+      const comparison = Utils.compareCellValues(valueA, valueB);
       return newDirection === 'asc' ? comparison : -comparison;
     });
 

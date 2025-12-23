@@ -8,18 +8,24 @@ window.TableExtensionTable = (function () {
   const HeaderBuilder = window.TableExtensionHeaderBuilder;
   const ARTICLE_ID_COLUMN = 'Article ID';
   const DONE_BY_COLUMN = 'DONE BY';
+  const SRC_COLUMN = 'SRC';
 
   // Highlight rules: name -> color mapping
-  // Easy to add new entries: just add 'Name': 'color' to this object
   const HIGHLIGHT_RULES = {
-    'Ruchi': '#e3f2fd',  // Light blue
-    // 'DDN': '#fff3e0',  // Light orange (example - uncomment to enable)
-    // 'Ankur': '#f3e5f5', // Light purple (example - uncomment to enable)
+    'Ruchi': '#e3f2fd',
   };
 
-  /**
-   * Show loading status in the DONE BY column
-   */
+  // Cell colors for SRC column values
+  const SRC_CELL_COLORS = {
+    'DOCX': '#eeeeee',
+    'TEX': '#e5e5e5',
+  };
+
+  // Flag to prevent recursive reordering
+  let isReordering = false;
+
+  // ============ CORE FUNCTIONS ============
+
   function showLoadingStatus() {
     const table = Utils.getTable();
     if (!table) return;
@@ -29,14 +35,12 @@ window.TableExtensionTable = (function () {
 
     if (doneByHeaderIndex === -1) return;
 
-    // Update header to show loading
     const doneByHeader = headers[doneByHeaderIndex];
     const wrapper = doneByHeader.querySelector('.DataTables_sort_wrapper');
     if (wrapper) {
       wrapper.innerHTML = 'DONE BY <span style="color: #667eea; font-size: 10px;">(Loading...)</span>';
     }
 
-    // Update all cells to show loading
     const rows = Utils.getTableRows(table);
     rows.forEach((row) => {
       const cells = Array.from(row.querySelectorAll('td'));
@@ -47,9 +51,6 @@ window.TableExtensionTable = (function () {
     });
   }
 
-  /**
-   * Remove loading status from header
-   */
   function removeLoadingStatus() {
     const table = Utils.getTable();
     if (!table) return;
@@ -67,17 +68,12 @@ window.TableExtensionTable = (function () {
     }
   }
 
-  /**
-   * Populate the DONE BY column with data from API
-   */
   function populateDoneByColumn() {
     const table = Utils.getTable();
     if (!table) return;
 
-    // Get fresh column indices each time (important after pagination)
     const headers = Utils.getHeaders(table);
 
-    // Find columns with strict validation
     let doneByHeaderIndex = -1;
     let articleIdIndex = -1;
 
@@ -85,18 +81,14 @@ window.TableExtensionTable = (function () {
       const headerText = th.textContent.trim();
       const headerLower = headerText.toLowerCase();
 
-      // Exact match for DONE BY
       if (headerLower === 'done by' || headerText === 'DONE BY') {
         doneByHeaderIndex = index;
       }
-
-      // Exact match for Article ID (case-insensitive)
       if (headerLower === 'article id' || headerText === 'Article ID') {
         articleIdIndex = index;
       }
     });
 
-    // If exact match failed, try the findColumnIndex method
     if (doneByHeaderIndex === -1) {
       doneByHeaderIndex = Utils.findColumnIndex(table, DONE_BY_COLUMN);
     }
@@ -108,12 +100,10 @@ window.TableExtensionTable = (function () {
       return;
     }
 
-    // Verify column indices are valid
     if (doneByHeaderIndex >= headers.length || articleIdIndex >= headers.length) {
       return;
     }
 
-    // Final verification - ensure headers match what we expect
     const foundDoneByHeader = headers[doneByHeaderIndex]?.textContent.trim() || '';
     const foundArticleIdHeader = headers[articleIdIndex]?.textContent.trim() || '';
     if (!foundDoneByHeader.toLowerCase().includes('done by') ||
@@ -123,9 +113,7 @@ window.TableExtensionTable = (function () {
 
     const rows = Utils.getTableRows(table);
     const articleMap = API.getArticleMap();
-    let populatedCount = 0;
 
-    // Verify header count matches expected column structure
     const expectedMinColumns = Math.max(articleIdIndex, doneByHeaderIndex) + 1;
     if (headers.length < expectedMinColumns) {
       return;
@@ -134,33 +122,25 @@ window.TableExtensionTable = (function () {
     rows.forEach((row) => {
       const cells = Array.from(row.querySelectorAll('td'));
 
-      // Ensure we have enough cells to match headers
       if (cells.length < headers.length) {
-        return; // Skip rows that don't match header structure
+        return;
       }
 
-      // Double-check we're reading from the correct Article ID column
       const articleId = cells[articleIdIndex]?.textContent.trim() || '';
       if (!articleId) {
-        return; // Skip rows without article ID
+        return;
       }
 
-      // Verify the cell we're reading from looks like an Article ID (contains alphanumeric pattern)
-      // This is a safety check to ensure we're not reading from the wrong column
       if (!/^[A-Z0-9]+/.test(articleId)) {
         return;
       }
 
-      // Get or create DONE BY cell - verify we're writing to the correct column
       const doneBy = articleMap.get(articleId) || '-';
       
       if (cells.length > doneByHeaderIndex) {
-        // Cell exists at the correct position
         const doneByCell = cells[doneByHeaderIndex];
         doneByCell.textContent = doneBy;
-        populatedCount++;
       } else {
-        // Cell doesn't exist, need to add it after Article ID
         const articleIdCell = cells[articleIdIndex];
         if (articleIdCell) {
           const newCell = document.createElement('td');
@@ -168,99 +148,74 @@ window.TableExtensionTable = (function () {
           newCell.className = ' ';
           newCell.textContent = doneBy;
           articleIdCell.insertAdjacentElement('afterend', newCell);
-          populatedCount++;
         }
       }
     });
-
-    // Highlight rows with "Ruchi" in Done by
-    highlightRows();
-
-    // Re-sort by DONE BY column after populating
-    setTimeout(() => {
-      if (window.jQuery && window.jQuery.fn.dataTable) {
-        try {
-          const dataTable = window.jQuery('#article_data').DataTable();
-          if (dataTable) {
-            const doneByIndex = Utils.findColumnIndex(Utils.getTable(), DONE_BY_COLUMN);
-            if (doneByIndex !== -1) {
-              dataTable.order([doneByIndex, 'asc']).draw(false);
-              // Re-highlight after sort
-              setTimeout(() => {
-                highlightRows();
-              }, 150);
-            }
-          }
-        } catch (e) {
-          // DataTables error
-        }
-      }
-    }, 200);
   }
 
-
-  /**
-   * Highlight rows where Done by matches the highlight name
-   */
-  function highlightRows() {
+  function colorSrcCells() {
     const table = Utils.getTable();
-    if (!table) {
-      return;
-    }
+    if (!table) return;
 
-    const doneByIndex = Utils.findColumnIndex(table, DONE_BY_COLUMN);
-    if (doneByIndex === -1) {
-      return;
-    }
+    const srcColumnIndex = Utils.findColumnIndex(table, SRC_COLUMN);
+    if (srcColumnIndex === -1) return;
 
     const rows = Utils.getTableRows(table);
-    const highlightCounts = {};
-    const foundValues = new Set();
 
-    // Initialize counts for each rule
-    Object.keys(HIGHLIGHT_RULES).forEach(name => {
-      highlightCounts[name] = 0;
+    rows.forEach((row) => {
+      const cells = Array.from(row.querySelectorAll('td'));
+      if (cells.length <= srcColumnIndex) return;
+
+      const srcValue = Utils.getCellValue(row, srcColumnIndex).trim().toUpperCase();
+      const cellColor = SRC_CELL_COLORS[srcValue];
+
+      cells.forEach((cell) => {
+        if (cellColor) {
+          cell.style.setProperty('background-color', cellColor, 'important');
+        } else {
+          cell.style.removeProperty('background-color');
+        }
+      });
     });
+  }
+
+  function highlightRows() {
+    const table = Utils.getTable();
+    if (!table) return;
+
+    const doneByIndex = Utils.findColumnIndex(table, DONE_BY_COLUMN);
+    if (doneByIndex === -1) return;
+
+    const rows = Utils.getTableRows(table);
 
     rows.forEach((row) => {
       const doneBy = Utils.getCellValue(row, doneByIndex).trim();
-      foundValues.add(doneBy);
 
-      // Remove all highlight classes first
       Object.keys(HIGHLIGHT_RULES).forEach((name, index) => {
         row.classList.remove(`highlight-row-${index}`);
       });
       row.style.removeProperty('background-color');
       row.removeAttribute('data-highlighted');
 
-      // Check if this row matches any highlight rule
       if (HIGHLIGHT_RULES.hasOwnProperty(doneBy)) {
         const color = HIGHLIGHT_RULES[doneBy];
         const index = Object.keys(HIGHLIGHT_RULES).indexOf(doneBy);
-
-        // Use both class and inline style with !important
         row.classList.add(`highlight-row-${index}`);
         row.style.setProperty('background-color', color, 'important');
         row.setAttribute('data-highlighted', doneBy);
-        highlightCounts[doneBy]++;
       }
     });
 
+    colorSrcCells();
   }
 
-  /**
-   * Add DONE BY column to the table
-   */
   function addDoneByColumn() {
     const table = Utils.getTable();
-    if (!table) {
-      return;
-    }
+    if (!table) return;
 
     const headerRow = Utils.getHeaderRow(table);
     if (!headerRow) return;
 
-    // Check if column already exists
     const headers = Utils.getHeaders(table);
     const existingHeader = headers.find(
       th => th.textContent.trim().includes(DONE_BY_COLUMN)
@@ -271,7 +226,6 @@ window.TableExtensionTable = (function () {
       return;
     }
 
-    // Find Article ID column header with strict matching
     let articleIdHeader = headers.find(
       th => {
         const text = th.textContent.trim();
@@ -279,24 +233,17 @@ window.TableExtensionTable = (function () {
       }
     );
 
-    // Fallback to includes if exact match fails
     if (!articleIdHeader) {
       articleIdHeader = headers.find(
         th => th.textContent.trim().toLowerCase().includes('article id')
       );
     }
 
-    if (!articleIdHeader) {
-      return;
-    }
+    if (!articleIdHeader) return;
 
-    // Verify we found the correct column
     const articleIdHeaderText = articleIdHeader.textContent.trim();
-    if (!articleIdHeaderText.toLowerCase().includes('article id')) {
-      return;
-    }
+    if (!articleIdHeaderText.toLowerCase().includes('article id')) return;
 
-    // Create new header column
     const newHeader = document.createElement('th');
     newHeader.className = 'ui-state-default';
     newHeader.setAttribute('role', 'columnheader');
@@ -315,22 +262,12 @@ window.TableExtensionTable = (function () {
     wrapper.appendChild(sortIcon);
 
     newHeader.appendChild(wrapper);
-
-    // Insert after Article ID header
     articleIdHeader.insertAdjacentElement('afterend', newHeader);
 
-    // Enable sorting on the new column
-    enableSortingOnDoneByColumn();
-
-    // Add data cells to all rows
     const rows = Utils.getTableRows(table);
     const articleMap = API.getArticleMap();
-
-    // Find Article ID column index (should be the one we just found)
     const articleIdIndex = Utils.findColumnIndex(table, ARTICLE_ID_COLUMN);
-    if (articleIdIndex === -1) {
-      return;
-    }
+    if (articleIdIndex === -1) return;
 
     rows.forEach((row) => {
       const cells = Array.from(row.querySelectorAll('td'));
@@ -339,7 +276,6 @@ window.TableExtensionTable = (function () {
         const articleId = articleIdCell.textContent.trim();
         if (articleId) {
           const doneBy = articleMap.get(articleId) || '-';
-
           const newCell = document.createElement('td');
           newCell.align = 'center';
           newCell.className = ' ';
@@ -350,45 +286,129 @@ window.TableExtensionTable = (function () {
     });
   }
 
+  // ============ TEX ROW ORDERING ============
+
   /**
-   * Enable sorting on DONE BY column and sort by default
+   * Move TEX rows to bottom of table - CORE function
+   * This is the ONLY function that moves rows
    */
-  function enableSortingOnDoneByColumn() {
-    // Wait a bit for DataTables to recognize the new column
-    setTimeout(() => {
-      if (window.jQuery && window.jQuery.fn.dataTable) {
-        try {
-          const dataTable = window.jQuery('#article_data').DataTable();
-          if (dataTable) {
-            // Find the DONE BY column index
-            const doneByIndex = Utils.findColumnIndex(Utils.getTable(), DONE_BY_COLUMN);
-            if (doneByIndex !== -1) {
-              // Sort by DONE BY column (ascending) by default
-              dataTable.order([doneByIndex, 'asc']).draw();
-            }
-          }
-        } catch (e) {
-          // Could not enable sorting
-        }
-      }
-    }, 500);
+  function moveTexRowsToBottom() {
+    // Prevent recursive calls
+    if (isReordering) return;
+    
+    const table = Utils.getTable();
+    if (!table) return;
+
+    const rows = Array.from(Utils.getTableRows(table));
+    if (rows.length === 0) return;
+
+    const srcColumnIndex = Utils.findColumnIndex(table, SRC_COLUMN);
+    if (srcColumnIndex === -1) return;
+
+    // Check if already in correct order (optimization)
+    if (Utils.areTexRowsAtBottom(rows, srcColumnIndex)) return;
+
+    const { texRows, nonTexRows } = Utils.splitRowsBySrc(rows, srcColumnIndex);
+    if (texRows.length === 0) return;
+
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    // Set flag to prevent recursive calls
+    isReordering = true;
+
+    // Move rows using fragment for performance
+    const fragment = document.createDocumentFragment();
+    nonTexRows.forEach(row => fragment.appendChild(row));
+    texRows.forEach(row => fragment.appendChild(row));
+    tbody.appendChild(fragment);
+
+    // Clear flag
+    isReordering = false;
   }
 
   /**
-   * Replace the entire table header with new structure
+   * Apply everything: move TEX rows then highlight
    */
+  function applyTableOrder() {
+    moveTexRowsToBottom();
+    highlightRows();
+  }
+
+  /**
+   * Finalize initial load - main entry point after data is loaded
+   */
+  function finalizeInitialLoad() {
+    applyTableOrder();
+  }
+
+  // ============ DATATABLES INTEGRATION ============
+
+  let dataTablesHooksInstalled = false;
+
+  /**
+   * Setup DataTables hooks - called once
+   */
+  function setupDataTablesTexSorting() {
+    if (dataTablesHooksInstalled) return;
+    if (!window.jQuery || !window.jQuery.fn.dataTable) return;
+
+    try {
+      const dataTable = window.jQuery('#article_data').DataTable();
+      if (!dataTable) return;
+
+      // Remove any existing handlers and add new ones
+      dataTable.off('.texsort');
+      
+      // Single handler for all DataTables events
+      dataTable.on('draw.texsort', function() {
+        // Use requestAnimationFrame to ensure DOM is updated
+        requestAnimationFrame(() => {
+          applyTableOrder();
+        });
+      });
+
+      dataTablesHooksInstalled = true;
+
+      // Apply immediately
+      applyTableOrder();
+    } catch (e) {
+      // DataTables not available
+    }
+  }
+
+  /**
+   * Sort by DONE BY column initially
+   */
+  function enableSortingOnDoneByColumn() {
+    setupDataTablesTexSorting();
+
+    if (window.jQuery && window.jQuery.fn.dataTable) {
+      try {
+        const dataTable = window.jQuery('#article_data').DataTable();
+        if (dataTable) {
+          const doneByIndex = Utils.findColumnIndex(Utils.getTable(), DONE_BY_COLUMN);
+          if (doneByIndex !== -1) {
+            dataTable.order([doneByIndex, 'asc']).draw();
+            // The draw event will trigger applyTableOrder
+          }
+        }
+      } catch (e) {
+        // Fallback: just apply order
+        applyTableOrder();
+      }
+    }
+  }
+
   function replaceTableHeader() {
     HeaderBuilder.replaceTableHeader(highlightRows);
   }
 
-  /**
-   * Handle column sorting (wrapper for sort manager)
-   * @param {number} columnIndex - Column index to sort
-   * @param {HTMLElement} headerCell - Header cell element
-   */
   function handleColumnSort(columnIndex, headerCell) {
     const Sort = window.TableExtensionSort;
-    Sort.handleColumnSort(columnIndex, headerCell, highlightRows);
+    Sort.handleColumnSort(columnIndex, headerCell, () => {
+      applyTableOrder();
+    });
   }
 
   // Public API
@@ -399,8 +419,13 @@ window.TableExtensionTable = (function () {
     addDoneByColumn,
     enableSortingOnDoneByColumn,
     highlightRows,
+    colorSrcCells,
     replaceTableHeader,
-    handleColumnSort
+    handleColumnSort,
+    setupDataTablesTexSorting,
+    moveTexRowsToBottom,
+    finalizeInitialLoad,
+    applyTableOrder
   };
 })();
 

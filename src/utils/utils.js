@@ -238,20 +238,119 @@ window.TableExtensionUtils = (function() {
     return abbrevMap;
   }
 
+  // ============ ROW UTILITIES ============
+
+  /**
+   * Check if a row is a TEX row based on SRC column
+   * @param {HTMLElement} row - Table row
+   * @param {number} srcColumnIndex - SRC column index
+   * @returns {boolean}
+   */
+  function isTexRow(row, srcColumnIndex) {
+    if (srcColumnIndex === -1) return false;
+    const cells = row.querySelectorAll('td');
+    if (cells.length <= srcColumnIndex) return false;
+    return cells[srcColumnIndex].textContent.trim().toUpperCase() === 'TEX';
+  }
+
+  /**
+   * Split rows into TEX and non-TEX arrays
+   * @param {HTMLElement[]} rows - Array of table rows
+   * @param {number} srcColumnIndex - SRC column index
+   * @returns {{ texRows: HTMLElement[], nonTexRows: HTMLElement[] }}
+   */
+  function splitRowsBySrc(rows, srcColumnIndex) {
+    const texRows = [];
+    const nonTexRows = [];
+
+    for (const row of rows) {
+      if (isTexRow(row, srcColumnIndex)) {
+        texRows.push(row);
+      } else {
+        nonTexRows.push(row);
+      }
+    }
+
+    return { texRows, nonTexRows };
+  }
+
+  /**
+   * Check if TEX rows are already at bottom (optimization check)
+   * @param {HTMLElement[]} rows - Array of table rows
+   * @param {number} srcColumnIndex - SRC column index
+   * @returns {boolean}
+   */
+  function areTexRowsAtBottom(rows, srcColumnIndex) {
+    let foundTex = false;
+    for (const row of rows) {
+      if (isTexRow(row, srcColumnIndex)) {
+        foundTex = true;
+      } else if (foundTex) {
+        // Found non-TEX after TEX - not in order
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // ============ SORTING UTILITIES ============
+
+  /**
+   * Compare two cell values for sorting (handles numbers, dates, strings)
+   * @param {string} valueA - First value
+   * @param {string} valueB - Second value
+   * @returns {number} - Comparison result (-1, 0, 1)
+   */
+  function compareCellValues(valueA, valueB) {
+    // Try numeric comparison
+    const numA = parseFloat(valueA);
+    const numB = parseFloat(valueB);
+    const isNumeric = !isNaN(numA) && !isNaN(numB) && valueA !== '' && valueB !== '';
+
+    if (isNumeric) {
+      return numA - numB;
+    }
+
+    // Try date comparison
+    const dateA = parseDate(valueA) || parseDateString(valueA);
+    const dateB = parseDate(valueB) || parseDateString(valueB);
+    if (dateA && dateB) {
+      return dateA - dateB;
+    }
+
+    // Fallback to string comparison
+    return valueA.localeCompare(valueB);
+  }
+
   // Public API
   return {
+    // DOM utilities
     getTable,
     getHeaderRow,
     getHeaders,
     findColumnIndex,
     getTableRows,
     getCellValue,
+    
+    // Async utilities
     debounce,
     waitForElement,
+    
+    // Date utilities
     parseDateString,
     formatDate,
     parseDate,
-    generateUniqueAbbreviations
+    
+    // String utilities
+    generateUniqueAbbreviations,
+    
+    // Row utilities
+    isTexRow,
+    splitRowsBySrc,
+    areTexRowsAtBottom,
+    
+    // Sorting utilities
+    compareCellValues
   };
 })();
 

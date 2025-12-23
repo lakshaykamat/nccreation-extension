@@ -79,7 +79,7 @@ window.TableExtensionFilter = (function() {
   }
 
   /**
-   * Apply filter to table rows
+   * Apply filter to table rows - Now shows all rows (no filtering)
    */
   function applyFilter() {
     const table = Utils.getTable();
@@ -91,32 +91,14 @@ window.TableExtensionFilter = (function() {
     }
 
     const rows = Utils.getTableRows(table);
-    let hiddenCount = 0;
-    let visibleCount = 0;
 
+    // Show all rows - no filtering
     rows.forEach((row) => {
-      const srcValue = Utils.getCellValue(row, srcColumnIndex);
-      const isTexRow = srcValue === TEX_VALUE;
-
-      if (isFilterEnabled && isTexRow) {
-        // Hide TEX rows when filter is enabled
-        row.style.display = 'none';
-        hiddenCount++;
-      } else {
-        // Show all rows when filter is disabled, or show non-TEX rows
-        row.style.display = '';
-        visibleCount++;
-      }
+      row.style.display = '';
     });
-
-    // Update button text with count
-    updateButtonText();
     
     // Update DataTables if available
     updateDataTables();
-    
-    // Don't update info text - let DataTables manage pagination text naturally
-    // Filtering only hides/shows rows with CSS, pagination should show total count
   }
   
   /**
@@ -162,18 +144,8 @@ window.TableExtensionFilter = (function() {
    * Update DataTables after filtering
    */
   function updateDataTables() {
-    if (window.jQuery && window.jQuery.fn.dataTable) {
-      try {
-        const dataTable = window.jQuery('#article_data').DataTable();
-        if (dataTable) {
-          // Trigger redraw to update pagination info
-          // Don't update info text - let DataTables manage it naturally
-          dataTable.draw(false); // false = don't reset paging
-        }
-      } catch (e) {
-        // DataTables not available or not initialized
-      }
-    }
+    // Don't call dataTable.draw() here - it causes row reordering issues
+    // The filter now just shows all rows, no DataTables update needed
   }
 
   /**
@@ -235,47 +207,16 @@ window.TableExtensionFilter = (function() {
   }
 
   /**
-   * Initialize filter - add button and apply default filter
+   * Initialize filter - no longer creates button, just ensures all rows are visible
    */
   function initializeFilter() {
-    // Find the search/filter div to add button next to search bar
-    const filterDiv = document.querySelector('#article_data_wrapper .dataTables_filter');
-    if (!filterDiv) {
-      setTimeout(initializeFilter, 1000);
-      return;
+    // Remove any existing button if it exists
+    const existingButton = document.getElementById('tex-filter-btn');
+    if (existingButton) {
+      existingButton.remove();
     }
 
-    // Check if button already exists
-    if (document.getElementById('tex-filter-btn')) {
-      return;
-    }
-
-    // Create and add button
-    const button = createFilterButton();
-    
-    // Add button to the filter div (same line as search bar)
-    // The filter div contains a label, so we add the button after the label
-    const label = filterDiv.querySelector('label');
-    if (label) {
-      // Add button after the label's input
-      const input = label.querySelector('input');
-      if (input && input.parentNode) {
-        // Insert button after the input element
-        input.parentNode.insertBefore(button, input.nextSibling);
-      } else {
-        // Fallback: append to label
-        label.appendChild(button);
-      }
-    } else {
-      // Fallback: append to filter div
-      filterDiv.appendChild(button);
-    }
-    
-    // Ensure filter div displays inline
-    filterDiv.style.display = 'inline-block';
-    filterDiv.style.verticalAlign = 'middle';
-
-    // Apply filter by default
+    // Ensure all rows are visible (no filtering)
     applyFilter();
   }
 
